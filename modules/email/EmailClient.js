@@ -160,18 +160,25 @@ class EmailClient extends EventEmitter {
   }
 
   /**
-   * Mengambil email yang belum dibaca (UNSEEN) dan memprosesnya melalui provider.
+   * Mengambil email baru dan memprosesnya melalui provider.
+   *
+   * Strategi pencarian: ambil email dari 15 menit terakhir (bukan hanya UNSEEN).
+   * Ini menghindari masalah ketika email sudah dibaca di Gmail Web sehingga
+   * statusnya jadi SEEN dan terlewat oleh bot.
+   * Duplikat dicegah oleh CacheHelper (berdasarkan Message-ID), bukan flag SEEN.
    */
   async _fetchAndProcessNewEmails() {
     try {
-      // Cari semua email yang belum dibaca
-      const uids = await this._client.search({ seen: false });
+      // Cari email yang masuk dalam 15 menit terakhir
+      const since = new Date(Date.now() - 15 * 60 * 1000);
+      const uids = await this._client.search({ since });
+
       if (!uids || uids.length === 0) {
-        logger.info('Tidak ada email baru yang belum dibaca.');
+        logger.info('Tidak ada email baru dalam 15 menit terakhir.');
         return;
       }
 
-      logger.info(`Ditemukan ${uids.length} email belum dibaca. Memproses...`);
+      logger.info(`Ditemukan ${uids.length} email baru. Memproses...`);
 
       for (const uid of uids) {
         await this._processEmail(uid);
