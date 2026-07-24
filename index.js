@@ -218,12 +218,18 @@ async function startBot() {
     if (type !== 'notify') return;
 
     for (const msg of messages) {
-      // Abaikan pesan dari diri sendiri atau pesan broadcast
-      if (msg.key.fromMe) continue;
       if (!msg.message) continue;
 
       const jid = msg.key.remoteJid;
       if (!jid) continue;
+
+      const ownerJid = `${process.env.OWNER_NUMBER}@s.whatsapp.net`;
+      const isSelfChat = jid === ownerJid; // owner kirim pesan ke diri sendiri
+
+      // Abaikan pesan fromMe KECUALI owner yang sedang kirim ke chat dirinya sendiri
+      // Ini memungkinkan owner test bot dengan kirim command ke "Pesan ke Diri Sendiri"
+      if (msg.key.fromMe && !isSelfChat) continue;
+
 
       // Ekstrak teks pesan
       const text =
