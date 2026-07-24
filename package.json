@@ -17,8 +17,15 @@
     "jsdom": "^29.1.1",
     "mailparser": "^3.7.1",
     "pino": "^9.3.2",
-    "pino-pretty": "^11.2.1"
+    "pino-pretty": "^11.2.1",
+    "puppeteer-core": "^25.3.0"
   },
-  "keywords": ["netflix", "email", "imap", "auto-confirm", "household"],
+  "keywords": [
+    "netflix",
+    "email",
+    "imap",
+    "auto-confirm",
+    "household"
+  ],
   "license": "MIT"
 }

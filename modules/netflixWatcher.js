@@ -24,7 +24,7 @@
 import 'dotenv/config';
 import { EmailClient } from './email/EmailClient.js';
 import * as NetflixProvider from './email/providers/NetflixProvider.js';
-import { autoConfirm } from './email/AutoConfirmer.js';
+import { autoConfirmWithBrowser } from './email/PuppeteerConfirmer.js';
 import {
   readCache,
   isAlreadyProcessed,
@@ -199,10 +199,9 @@ async function _handleNewEmail({ provider, data, sendMessage }) {
   logger.info(`   Link    : ${data.confirmUrl || '(tidak ditemukan)'}`);
 
   // ---- AUTO CONFIRM ----
-  // Jika AUTO_CONFIRM=true di .env dan ada link, langsung konfirmasi
   if (AUTO_CONFIRM && data.confirmUrl) {
-    logger.info('AUTO_CONFIRM aktif — mengkonfirmasi link...');
-    const result = await autoConfirm(data.confirmUrl).catch((err) => ({
+    logger.info('AUTO_CONFIRM aktif — membuka browser untuk konfirmasi...');
+    const result = await autoConfirmWithBrowser(data.confirmUrl).catch((err) => ({
       ok: false,
       message: err.message,
     }));
