@@ -308,7 +308,7 @@ function _validateConfig() {
     EMAIL_PORT: IMAP_CONFIG.port,
     EMAIL_USER: IMAP_CONFIG.user,
     EMAIL_PASS: IMAP_CONFIG.pass,
-    OWNER_NUMBER: OWNER_NUMBER,
+    // OWNER_NUMBER tidak wajib lagi - bot berjalan tanpa WhatsApp
   };
 
   const missing = Object.entries(required)
