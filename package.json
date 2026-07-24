@@ -1,7 +1,7 @@
 {
-  "name": "autonetflix-wa-bot",
-  "version": "1.0.0",
-  "description": "WhatsApp Bot dengan Netflix Email Watcher menggunakan Baileys & imapflow",
+  "name": "autonetflix",
+  "version": "2.0.0",
+  "description": "Auto-confirm Netflix household email menggunakan IMAP IDLE",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -12,22 +12,13 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.18",
     "dotenv": "^16.4.5",
     "imapflow": "^1.0.169",
     "jsdom": "^29.1.1",
     "mailparser": "^3.7.1",
     "pino": "^9.3.2",
-    "pino-pretty": "^11.2.1",
-    "qrcode-terminal": "^0.12.0"
+    "pino-pretty": "^11.2.1"
   },
-  "keywords": [
-    "whatsapp",
-    "bot",
-    "netflix",
-    "email",
-    "baileys",
-    "imap"
-  ],
+  "keywords": ["netflix", "email", "imap", "auto-confirm", "household"],
   "license": "MIT"
 }

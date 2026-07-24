@@ -24,6 +24,7 @@
 import 'dotenv/config';
 import { EmailClient } from './email/EmailClient.js';
 import * as NetflixProvider from './email/providers/NetflixProvider.js';
+import { autoConfirm } from './email/AutoConfirmer.js';
 import {
   readCache,
   isAlreadyProcessed,
@@ -45,6 +46,9 @@ const IMAP_CONFIG = {
 const OWNER_NUMBER = process.env.OWNER_NUMBER;
 const WAITING_ROOM_TTL_MS =
   parseInt(process.env.WAITING_ROOM_TTL_MINUTES || '5', 10) * 60 * 1000;
+
+// Jika AUTO_CONFIRM=true di .env, bot akan otomatis mengklik link konfirmasi
+const AUTO_CONFIRM = process.env.AUTO_CONFIRM === 'true';
 
 // ---- State Internal ----
 let _emailClient = null;
@@ -175,7 +179,8 @@ function isInWaitingRoom(jid) {
 
 /**
  * Memproses email baru yang sudah diterima dari EmailClient.
- * Mengirim notifikasi ke Owner dan ke pengguna di Waiting Room.
+ * Jika AUTO_CONFIRM=true: otomatis klik link konfirmasi.
+ * Jika sendMessage tersedia: kirim notifikasi WhatsApp (opsional).
  */
 async function _handleNewEmail({ provider, data, sendMessage }) {
   // Cek apakah email ini sudah pernah diproses sebelumnya
@@ -187,29 +192,52 @@ async function _handleNewEmail({ provider, data, sendMessage }) {
 
   // Simpan ke cache
   await markAsProcessed(data);
-  logger.info('Notification sent');
 
-  // Format pesan WhatsApp
-  const message = _formatWhatsAppMessage(data);
+  logger.info(`📬 Email Netflix baru!`);
+  logger.info(`   Subject : ${data.subject}`);
+  logger.info(`   From    : ${data.from}`);
+  logger.info(`   Link    : ${data.confirmUrl || '(tidak ditemukan)'}`);
 
-  // Kirim ke Owner
-  if (OWNER_NUMBER) {
-    const ownerJid = `${OWNER_NUMBER}@s.whatsapp.net`;
-    await sendMessage(ownerJid, message).catch((err) =>
-      logger.error(`Gagal kirim ke owner: ${err.message}`)
-    );
+  // ---- AUTO CONFIRM ----
+  // Jika AUTO_CONFIRM=true di .env dan ada link, langsung konfirmasi
+  if (AUTO_CONFIRM && data.confirmUrl) {
+    logger.info('AUTO_CONFIRM aktif — mengkonfirmasi link...');
+    const result = await autoConfirm(data.confirmUrl).catch((err) => ({
+      ok: false,
+      message: err.message,
+    }));
+
+    if (result.ok) {
+      logger.info(`✅ Konfirmasi BERHASIL: ${result.message}`);
+    } else {
+      logger.error(`❌ Konfirmasi GAGAL: ${result.message}`);
+    }
+  } else if (AUTO_CONFIRM && !data.confirmUrl) {
+    logger.warn('AUTO_CONFIRM aktif tapi tidak ada link konfirmasi di email ini.');
   }
 
-  // Kirim ke semua pengguna di Waiting Room (fitur "Sistem Gacor")
-  const waitingUsers = _getActiveWaitingUsers();
-  for (const jid of waitingUsers) {
-    if (jid !== `${OWNER_NUMBER}@s.whatsapp.net`) {
-      const userMessage = `📺 *Netflix Alert* - Notifikasi untuk Anda!\n\n${message}`;
-      await sendMessage(jid, userMessage).catch((err) =>
-        logger.error(`Gagal kirim ke ${jid}: ${err.message}`)
-      );
+  // ---- NOTIFIKASI WHATSAPP (opsional) ----
+  // Hanya dikirim jika sendMessage dan OWNER_NUMBER tersedia
+  if (typeof sendMessage === 'function' && OWNER_NUMBER) {
+    const message = _formatWhatsAppMessage(data);
+    const ownerJid = `${OWNER_NUMBER}@s.whatsapp.net`;
+    await sendMessage(ownerJid, message).catch((err) =>
+      logger.error(`Gagal kirim WA ke owner: ${err.message}`)
+    );
+
+    // Kirim ke pengguna di Waiting Room
+    const waitingUsers = _getActiveWaitingUsers();
+    for (const jid of waitingUsers) {
+      if (jid !== ownerJid) {
+        const userMessage = `📺 *Netflix Alert* - Notifikasi untuk Anda!\n\n${message}`;
+        await sendMessage(jid, userMessage).catch((err) =>
+          logger.error(`Gagal kirim WA ke ${jid}: ${err.message}`)
+        );
+      }
+      _waitingRoom.delete(jid);
     }
-    _waitingRoom.delete(jid); // Hapus dari waiting room setelah dikirim
+
+    logger.info('Notification sent');
   }
 }
 
